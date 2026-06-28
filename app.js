@@ -299,20 +299,27 @@ function cargarModulo(id) {
             <button onclick="guardarConfig()" class="bg-blue-600 text-white w-full py-2 rounded">Guardar Cambios</button>`;
     } 
     else if (id === 'rotulacion') {
-        cont.innerHTML = `${btnVolver}
-            <div id="capturaRotulo" class="border-2 border-black p-6 border-dashed bg-white w-full">
-                <h2 class="text-2xl font-bold uppercase mb-6">📦 Rótulo de Encomienda</h2>
-                <div class="grid grid-cols-2 gap-x-10 gap-y-6 text-lg">
-                    ${['FECHA', 'DESTINO', 'NOMBRES', 'OFICINA', 'APELLIDOS', 'MODELO', 'DNI', 'COLOR', 'CELULAR', 'TALLA', 'PAGO', 'CANTIDAD', 'AGENCIA'].map(label => 
-                        `<p><strong>${label}:</strong> <input class="border-b-2 border-gray-400 w-full outline-none"></p>`
-                    ).join('')}
-                </div>
-            </div>
-            <div class="flex gap-4 mt-6">
-                <button onclick="window.print()" class="flex-1 bg-gray-800 text-white py-3 font-bold print-hidden">IMPRIMIR</button>
-                <button onclick="descargarWord()" class="flex-1 bg-blue-700 text-white py-3 font-bold print-hidden">DESCARGAR WORD</button>
-            </div>`;
-    } 
+        // ... dentro de cargarModulo, en el bloque rotulacion:
+const fechaHoy = new Date().toLocaleDateString('es-PE'); // Formato dd/mm/aaaa
+
+cont.innerHTML = `${btnVolver}
+    <div id="capturaRotulo" class="border-2 border-black p-6 border-dashed bg-white w-full">
+        <h2 class="text-2xl font-bold uppercase mb-6">📦 Rótulo de Encomienda</h2>
+        <div class="grid grid-cols-2 gap-x-10 gap-y-6 text-lg">
+            ${['FECHA', 'DESTINO', 'NOMBRES', 'OFICINA', 'APELLIDOS', 'MODELO', 'DNI', 'COLOR', 'CELULAR', 'TALLA', 'PAGO', 'CANTIDAD', 'AGENCIA'].map(label => {
+                // Si es fecha, le ponemos el value precargado
+                const esFecha = label === 'FECHA';
+                return `<p><strong>${label}:</strong> 
+                    <input value="${esFecha ? fechaHoy : ''}" class="border-b-2 border-gray-400 w-full outline-none">
+                </p>`;
+            }).join('')}
+        </div>
+    </div>
+    <div class="flex gap-4 mt-6">
+        <button onclick="window.print()" class="flex-1 bg-gray-800 text-white py-3 font-bold print-hidden">IMPRIMIR</button>
+        <button onclick="descargarWord()" class="flex-1 bg-blue-700 text-white py-3 font-bold print-hidden">DESCARGAR WORD</button>
+    </div>`;
+    }
     else {
         // Módulos de Compras y Ventas
         // ... dentro de tu función cargarModulo(id), bloque else:
