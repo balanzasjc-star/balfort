@@ -1,6 +1,7 @@
 // --- Estado Inicial ---
 let inventario = JSON.parse(localStorage.getItem('bd_inventario')) || [];
-let indiceEditando = null;
+let clientes = JSON.parse(localStorage.getItem('bd_clientes')) || []; // <--- AGREGA ESTO
+let clienteEditandoIndex = null;
 
 let configuracion = JSON.parse(localStorage.getItem('app_config')) || {
     modelos: ["Pitillo 1 boton", "Pitillo 3 botones", "Pitillo fajero", "Skyni", "Palaso"],
@@ -25,12 +26,20 @@ function generarOpciones(tipo) {
 }
 
 function guardarConfig() {
+    // Guardar listas
     configuracion.modelos = document.getElementById('cfg_modelos').value.split(',').map(s => s.trim()).filter(s => s !== "");
     configuracion.colores = document.getElementById('cfg_colores').value.split(',').map(s => s.trim()).filter(s => s !== "");
     configuracion.tallas = document.getElementById('cfg_tallas').value.split(',').map(s => s.trim()).filter(s => s !== "");
+    
+    // Guardar nuevos nombres de botones
+    for (let key in configuracion.btnNombres) {
+        const nuevoNombre = document.getElementById('cfg_btn_' + key).value;
+        configuracion.btnNombres[key] = nuevoNombre;
+    }
+
     localStorage.setItem('app_config', JSON.stringify(configuracion));
     alert("Configuración guardada.");
-    location.reload();
+    location.reload(); // Recarga para aplicar los nombres en el menú
 }
 
 // --- Gestión de Inventario ---
@@ -61,6 +70,29 @@ function registrar(tipo) {
     }
 }
 
+function guardarRotuloComoCliente() {
+    const rotulo = document.getElementById('capturaRotulo');
+    const inputs = rotulo.querySelectorAll('input');
+    const datosCliente = {};
+    
+    inputs.forEach(input => {
+        const label = input.parentElement.querySelector('strong').innerText.replace(':', '');
+        datosCliente[label] = input.value;
+    });
+
+    if (clienteEditandoIndex !== null) {
+        // Si estamos editando, reemplazamos el registro
+        clientes[clienteEditandoIndex] = datosCliente;
+        clienteEditandoIndex = null; // Reseteamos
+    } else {
+        // Si es nuevo, lo añadimos
+        clientes.push(datosCliente);
+    }
+
+    localStorage.setItem('bd_clientes', JSON.stringify(clientes));
+    alert("Guardado correctamente.");
+    volver(); // Volvemos al menú o a la vista principal
+}
 // --- 1. Corrige actualizarTabla ---
 // --- 1. Corregido: Actualizar Tabla (Inventario) ---
 function actualizarTabla() {
@@ -283,44 +315,96 @@ function cargarModulo(id) {
             <div id="listaStock"></div>`; 
         actualizarTabla(); 
     }
+    else if (id === 'clientes') {
+    let filas = clientes.map((c, index) => `
+        <tr class="border-b hover:bg-gray-50">
+            <td class="p-2 border-r">${c.FECHA || ''}</td>
+            <td class="p-2 border-r font-medium text-left">${c.NOMBRES || ''} ${c.APELLIDOS || ''}</td>
+            <td class="p-2 border-r">${c.DNI || ''}</td>
+            <td class="p-2 border-r">${c.CELULAR || ''}</td>
+            <td class="p-2 border-r">${c.PAGO || ''}</td>
+            <td class="p-2 border-r">${c.AGENCIA || ''}</td>
+            <td class="p-2 border-r">${c.DESTINO || ''}</td>
+            <td class="p-2 border-r">${c.OFICINA || ''}</td>
+            <td class="p-2 border-r">${c.MODELO || ''}</td>
+            <td class="p-2 border-r">${c.COLOR || ''}</td>
+            <td class="p-2 border-r">${c.TALLA || ''}</td>
+            <td class="p-2 border-r">${c.CANTIDAD || ''}</td>
+            <td class="p-2">
+                <button onclick="editarCliente(${index})" class="text-blue-600 mr-2">✏️</button>
+                <button onclick="borrarCliente(${index})" class="text-red-600 font-bold">🗑️</button>
+            </td>
+        </tr>
+    `).join('');
+
+    cont.innerHTML = `${btnVolver}
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">Base de Datos de Clientes</h2>
+            <button onclick="descargarClientesExcel()" class="bg-green-700 text-white px-4 py-2 rounded font-bold">📊 Excel</button>
+        </div>
+        <div class="overflow-x-auto shadow-md rounded-lg">
+            <table class="w-full text-center text-sm border-collapse bg-white">
+                <thead class="bg-gray-800 text-white">
+                    <tr>
+                        <th class="p-2">Fecha</th><th class="p-2">Nombre</th><th class="p-2">DNI</th>
+                        <th class="p-2">Cel</th><th class="p-2">Pago</th><th class="p-2">Agencia</th>
+                        <th class="p-2">Destino</th><th class="p-2">Oficina</th><th class="p-2">Modelo</th>
+                        <th class="p-2">Color</th><th class="p-2">Talla</th><th class="p-2">Cant</th>
+                        <th class="p-2">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>${filas}</tbody>
+            </table>
+        </div>`;
+}
     else if (id === 'historial') { 
         cont.innerHTML = `${btnVolver}`;
         cargarHistorial(); 
     } 
     else if (id === 'configuracion') {
-        cont.innerHTML = `${btnVolver}
-            <h2 class="text-xl font-bold mb-4">⚙️ Configuración</h2>
-            <label class="block font-bold">Modelos:</label>
-            <textarea id="cfg_modelos" class="w-full border p-2 mb-2">${configuracion.modelos.join(', ')}</textarea>
-            <label class="block font-bold">Colores:</label>
-            <textarea id="cfg_colores" class="w-full border p-2 mb-2">${configuracion.colores.join(', ')}</textarea>
-            <label class="block font-bold">Tallas:</label>
-            <textarea id="cfg_tallas" class="w-full border p-2 mb-4">${configuracion.tallas.join(', ')}</textarea>
-            <button onclick="guardarConfig()" class="bg-blue-600 text-white w-full py-2 rounded">Guardar Cambios</button>`;
-    } 
-    else if (id === 'rotulacion') {
-        // ... dentro de cargarModulo, en el bloque rotulacion:
-const fechaHoy = new Date().toLocaleDateString('es-PE'); // Formato dd/mm/aaaa
-
-cont.innerHTML = `${btnVolver}
-    <div id="capturaRotulo" class="border-2 border-black p-6 border-dashed bg-white w-full">
-        <h2 class="text-2xl font-bold uppercase mb-6">📦 Rótulo de Encomienda</h2>
-        <div class="grid grid-cols-2 gap-x-10 gap-y-6 text-lg">
-            ${['FECHA', 'DESTINO', 'NOMBRES', 'OFICINA', 'APELLIDOS', 'MODELO', 'DNI', 'COLOR', 'CELULAR', 'TALLA', 'PAGO', 'CANTIDAD', 'AGENCIA'].map(label => {
-                // Si es fecha, le ponemos el value precargado
-                const esFecha = label === 'FECHA';
-                return `<p><strong>${label}:</strong> 
-                    <input value="${esFecha ? fechaHoy : ''}" class="border-b-2 border-gray-400 w-full outline-none">
-                </p>`;
-            }).join('')}
+    cont.innerHTML = `${btnVolver}
+        <h2 class="text-xl font-bold mb-4">⚙️ Configuración</h2>
+        
+        <h3 class="font-bold mt-4">Nombres de Botones:</h3>
+        <div class="grid grid-cols-2 gap-2 mb-4">
+            ${Object.entries(configuracion.btnNombres).map(([key, val]) => `
+                <div>
+                    <label class="text-xs uppercase">${key}</label>
+                    <input id="cfg_btn_${key}" value="${val}" class="w-full border p-1 rounded">
+                </div>
+            `).join('')}
         </div>
-    </div>
-    <div class="flex gap-4 mt-6">
-        <button onclick="window.print()" class="flex-1 bg-gray-800 text-white py-3 font-bold print-hidden">IMPRIMIR</button>
-        <button onclick="descargarWord()" class="flex-1 bg-blue-700 text-white py-3 font-bold print-hidden">DESCARGAR WORD</button>
-    </div>`;
+
+        <label class="block font-bold">Modelos:</label>
+        <textarea id="cfg_modelos" class="w-full border p-2 mb-2">${configuracion.modelos.join(', ')}</textarea>
+        <label class="block font-bold">Colores:</label>
+        <textarea id="cfg_colores" class="w-full border p-2 mb-2">${configuracion.colores.join(', ')}</textarea>
+        <label class="block font-bold">Tallas:</label>
+        <textarea id="cfg_tallas" class="w-full border p-2 mb-4">${configuracion.tallas.join(', ')}</textarea>
+        <button onclick="guardarConfig()" class="bg-blue-600 text-white w-full py-2 rounded">Guardar Cambios</button>`;
+        }
+    else if (id === 'rotulacion') {
+        const fechaHoy = new Date().toLocaleDateString('es-PE');
+        // Si clienteEditandoIndex NO es null, cargamos los datos del cliente guardado
+        const c = clienteEditandoIndex !== null ? clientes[clienteEditandoIndex] : {};
+
+        cont.innerHTML = `${btnVolver}
+        <div id="capturaRotulo" class="border-2 border-black p-6 border-dashed bg-white w-full">
+            <h2 class="text-2xl font-bold uppercase mb-6">📦 ${clienteEditandoIndex !== null ? 'Editar' : 'Nuevo'} Rótulo</h2>
+            <div class="grid grid-cols-2 gap-x-10 gap-y-6 text-lg">
+                ${['FECHA', 'DESTINO', 'NOMBRES', 'OFICINA', 'APELLIDOS', 'MODELO', 'DNI', 'COLOR', 'CELULAR', 'TALLA', 'PAGO', 'CANTIDAD', 'AGENCIA'].map(label => {
+                    const valor = c[label] || (label === 'FECHA' ? fechaHoy : '');
+                    return `<p><strong>${label}:</strong> <input value="${valor}" class="border-b-2 border-gray-400 w-full outline-none"></p>`;
+                }).join('')}
+            </div>
+        </div>
+        <div class="flex gap-4 mt-6 print-hidden">
+            <button onclick="window.print()" class="flex-1 bg-gray-800 text-white py-3 font-bold">IMPRIMIR</button>
+            <button onclick="descargarWord()" class="flex-1 bg-blue-700 text-white py-3 font-bold">DESCARGAR WORD</button>
+            <button onclick="guardarRotuloComoCliente()" class="flex-1 bg-green-600 text-white py-3 font-bold">GUARDAR CAMBIOS</button>
+        </div>`;
     }
-    else {
+     else {
         // Módulos de Compras y Ventas
         // ... dentro de tu función cargarModulo(id), bloque else:
         cont.innerHTML = `${btnVolver}
@@ -339,7 +423,10 @@ cont.innerHTML = `${btnVolver}
         }
 
 }
-
+function editarCliente(index) {
+    clienteEditandoIndex = index; // Guardamos el índice globalmente
+    cargarModulo('rotulacion');   // Abrimos el módulo
+}
 // --- FUNCIÓN VOLVER ---
 function volver() {
     console.log("Intentando volver al menú...");
@@ -389,4 +476,27 @@ function calcularTotal() {
         // Actualizamos el texto en pantalla
         display.innerText = total.toFixed(2);
     }
+}
+function borrarCliente(index) {
+    if (confirm("¿Eliminar cliente?")) {
+        clientes.splice(index, 1);
+        localStorage.setItem('bd_clientes', JSON.stringify(clientes));
+        cargarModulo('clientes');
+    }
+}
+// Función para descargar clientes en Excel
+function descargarClientesExcel() {
+    let html = `<html xmlns:x="urn:schemas-microsoft-com:office:excel"><table border="1">
+        <tr><th>Fecha</th><th>Nombre</th><th>DNI</th><th>Celular</th><th>Pago</th><th>Agencia</th><th>Destino</th><th>Oficina</th><th>Modelo</th><th>Color</th><th>Talla</th><th>Cantidad</th></tr>`;
+    
+    clientes.forEach(c => {
+        html += `<tr><td>${c.FECHA}</td><td>${c.NOMBRES} ${c.APELLIDOS}</td><td>${c.DNI}</td><td>${c.CELULAR}</td><td>${c.PAGO}</td><td>${c.AGENCIA}</td><td>${c.DESTINO}</td><td>${c.OFICINA}</td><td>${c.MODELO}</td><td>${c.COLOR}</td><td>${c.TALLA}</td><td>${c.CANTIDAD}</td></tr>`;
+    });
+    
+    html += `</table></html>`;
+    const blob = new Blob([html], { type: "application/vnd.ms-excel" });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = "Lista_Clientes.xls";
+    link.click();
 }
