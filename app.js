@@ -194,49 +194,70 @@ function guardarEdicion() {
     actualizarTabla();
 }
 // 1. Función corregida de Historial (con botón volver, editar y borrar)
+// --- Reemplaza esto a partir de la línea 197 ---
 function cargarHistorial() {
-    let totalCompras = 0, totalVentas = 0;
-    inventario.forEach(i => {
-        const subtotal = i.cantidad * i.precio;
-        if (i.tipo === 'ventas') totalVentas += Math.abs(subtotal);
-        else totalCompras += Math.abs(subtotal);
-    });
+    // ... dentro de cargarHistorial()
+document.getElementById('contenidoDinamico').innerHTML = `
+    <button onclick="volver()" class="bg-gray-800 text-white px-4 py-2 rounded mb-6">← Volver al Menú</button>
+    <h2 class="text-xl font-bold mb-4">Historial</h2>
+    
+    <div id="resumenTotales"></div> 
+
+    <div class="flex gap-2 mb-4">
+        <button onclick="borrarTodo()" class="flex-1 bg-red-600 text-white py-2 rounded">🗑️ Borrar Todo</button>
+        <button onclick="descargarExcel()" class="flex-1 bg-green-700 text-white py-2 rounded">📊 Descargar Excel</button>
+    </div>
+
+    <div class="grid grid-cols-4 gap-2 mb-4 bg-gray-100 p-2 rounded">
+        
+        <input type="month" id="hist_fecha" onchange="renderizarHistorial()" class="p-1 border rounded text-sm">
+        <select id="hist_modelo" onchange="renderizarHistorial()" class="p-1 border rounded text-sm"><option value="">Modelo</option>${generarOpciones('modelos')}</select>
+        <select id="hist_color" onchange="renderizarHistorial()" class="p-1 border rounded text-sm"><option value="">Color</option>${generarOpciones('colores')}</select>
+        <select id="hist_tipo" onchange="renderizarHistorial()" class="p-1 border rounded text-sm"><option value="">Tipo</option><option value="compras">Compras</option><option value="ventas">Ventas</option></select>
+    </div>
+
+    <div id="contenedorTablaHistorial"></div>
+`;
+
+    renderizarHistorial(); 
+}
+function renderizarHistorial() {
+    const mesF = document.getElementById('hist_fecha').value; // Recibe "2026-07"
+    const modF = document.getElementById('hist_modelo').value;
+    const colF = document.getElementById('hist_color').value;
+    const tipoF = document.getElementById('hist_tipo').value;
 
     let filas = "";
+    
     inventario.forEach((i, index) => {
-        const total = i.cantidad * i.precio;
-        filas += `<tr class="border-b ${i.tipo === 'ventas' ? 'text-red-600 font-bold' : ''}">
-            <td>${i.fecha}</td><td>${i.modelo}</td><td>${i.color}</td><td>${i.talla}</td><td>${i.tipo}</td>
-            <td>${Math.abs(i.cantidad)}</td><td>S/ ${i.precio.toFixed(2)}</td><td>S/ ${Math.abs(total).toFixed(2)}</td>
-            <td>
-                <button onclick="prepararEdicion(${index})" class="mr-2">✏️</button>
-                <button onclick="borrarItem(${index})">🗑️</button>
-            </td>
-        </tr>`;
+        // Convertimos "1/7/2026" a "2026-07"
+        const p = i.fecha.split('/');
+        const mesObj = `${p[2]}-${p[1].padStart(2, '0')}`;
+        
+        const coincideFecha = (mesF === "" || mesObj === mesF);
+        const coincideModelo = (modF === "" || i.modelo === modF);
+        const coincideColor = (colF === "" || i.color === colF);
+        const coincideTipo = (tipoF === "" || i.tipo === tipoF);
+
+        if (coincideFecha && coincideModelo && coincideColor && coincideTipo) {
+            const subtotal = Math.abs(i.cantidad * i.precio);
+            filas += `<tr class="border-b ${i.tipo === 'ventas' ? 'text-red-600' : ''}">
+                <td>${i.fecha}</td><td>${i.modelo}</td><td>${i.color}</td><td>${i.talla}</td>
+                <td>${i.tipo}</td><td>${Math.abs(i.cantidad)}</td><td>S/ ${i.precio.toFixed(2)}</td>
+                <td>S/ ${subtotal.toFixed(2)}</td>
+                <td>
+                    <button onclick="prepararEdicion(${index})" class="mr-2">✏️</button>
+                    <button onclick="borrarItem(${index})">🗑️</button>
+                </td>
+            </tr>`;
+        }
     });
 
-    document.getElementById('contenidoDinamico').innerHTML = `
-        <button onclick="volver()" class="bg-gray-800 text-white px-4 py-2 rounded mb-6">← Volver al Menú</button>
-        <h2 class="text-xl font-bold mb-4">Historial</h2>
-        <div class="grid grid-cols-2 gap-4 mb-4">
-            <div class="p-4 bg-blue-100 rounded text-center"><h3 class="font-bold">Inversión</h3><p class="text-xl">S/ ${totalCompras.toFixed(2)}</p></div>
-            <div class="p-4 bg-green-100 rounded text-center"><h3 class="font-bold">Ventas</h3><p class="text-xl">S/ ${totalVentas.toFixed(2)}</p></div>
-        </div>
-        <div class="flex gap-2 mb-4">
-            <button onclick="borrarTodo()" class="flex-1 bg-red-600 text-white py-2 rounded">🗑️ Borrar Todo</button>
-            <button onclick="descargarExcel()" class="flex-1 bg-green-700 text-white py-2 rounded">📊 Descargar Excel</button>
-        </div>
-        <table class="w-full border text-center text-sm">${filas}</table>`;
+    document.getElementById('contenedorTablaHistorial').innerHTML = `<table class="w-full text-sm border-collapse">${filas}</table>`;
+
+    
 }
 
-// 2. Función Borrar Todo
-function borrarTodo() {
-    if (confirm("¿Estás seguro de borrar TODO el historial? Esta acción no se puede deshacer.")) {
-        inventario = [];
-        localStorage.setItem('bd_inventario', JSON.stringify(inventario));
-        cargarHistorial();
-    }
-}
 
 // 3. Funciones de Edición (Debe estar fuera de otras funciones)
 function prepararEdicion(index) {
@@ -282,14 +303,40 @@ function guardarEdicionHistorial() {
 
 // --- Funciones de Descarga ---
 function descargarExcel() {
-    let html = `<html xmlns:x="urn:schemas-microsoft-com:office:excel"><table border="1"><tr><th>Fecha</th><th>Modelo</th><th>Color</th><th>Talla</th><th>Tipo</th><th>Cant</th><th>Precio</th><th>Total</th></tr>`;
-    inventario.forEach(i => {
-        html += `<tr><td>${i.fecha}</td><td>${i.modelo}</td><td>${i.color}</td><td>${i.talla}</td><td>${i.tipo}</td><td>${Math.abs(i.cantidad)}</td><td>${i.precio}</td><td>${Math.abs(i.cantidad*i.precio)}</td></tr>`;
+    // 1. Obtener valores de los filtros actuales (igual que en renderizarHistorial)
+    const fechaFiltro = document.getElementById('hist_fecha').value; 
+    const modF = document.getElementById('hist_modelo').value;
+    const colF = document.getElementById('hist_color').value;
+    const tipF = document.getElementById('hist_tipo').value;
+
+    // 2. Filtrar el array 'inventario'
+    const datosFiltrados = inventario.filter(i => {
+        // Conversión de fecha para comparación
+        const partes = i.fecha.split('/');
+        const fechaComparar = `${partes[2]}-${partes[1].padStart(2, '0')}-${partes[0].padStart(2, '0')}`;
+        
+        const coincideFecha = (fechaFiltro === "" || fechaComparar === fechaFiltro);
+        const coincideModelo = (modF === "" || i.modelo === modF);
+        const coincideColor = (colF === "" || i.color === colF);
+        const coincideTipo = (tipF === "" || i.tipo === tipF);
+
+        return coincideFecha && coincideModelo && coincideColor && coincideTipo;
     });
+
+    // 3. Generar HTML de la tabla con datos filtrados
+    let html = `<table border="1"><tr><th>Fecha</th><th>Modelo</th><th>Color</th><th>Talla</th><th>Tipo</th><th>Cantidad</th><th>Precio</th><th>Total</th></tr>`;
+    
+    datosFiltrados.forEach(i => {
+        const total = Math.abs(i.cantidad * i.precio);
+        html += `<tr><td>${i.fecha}</td><td>${i.modelo}</td><td>${i.color}</td><td>${i.talla}</td><td>${i.tipo}</td><td>${Math.abs(i.cantidad)}</td><td>${i.precio}</td><td>${total.toFixed(2)}</td></tr>`;
+    });
+    html += `</table>`;
+
+    // 4. Descargar
     const blob = new Blob([html], { type: "application/vnd.ms-excel" });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = "Historial.xls";
+    link.download = "Historial_Filtrado.xls";
     link.click();
 }
 
