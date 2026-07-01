@@ -1,4 +1,6 @@
 // --- Estado Inicial ---
+let indiceEditando = null;
+let productoEditando = null;
 let inventario = JSON.parse(localStorage.getItem('bd_inventario')) || [];
 let clientes = JSON.parse(localStorage.getItem('bd_clientes')) || []; // <--- AGREGA ESTO
 let clienteEditandoIndex = null;
@@ -96,6 +98,11 @@ function guardarRotuloComoCliente() {
 // --- 1. Corrige actualizarTabla ---
 // --- 1. Corregido: Actualizar Tabla (Inventario) ---
 function actualizarTabla() {
+    // 1. Obtener valores de los filtros
+    const filtroMod = document.getElementById('filtro_modelo')?.value || "";
+    const filtroCol = document.getElementById('filtro_color')?.value || "";
+    const filtroTal = document.getElementById('filtro_talla')?.value || "";
+
     const res = {};
     inventario.forEach((i) => {
         const k = `${i.modelo}-${i.color}-${i.talla}`;
@@ -103,9 +110,17 @@ function actualizarTabla() {
         res[k].total += i.cantidad;
     });
 
+    // 2. Filtrar los resultados
+    const datosFiltrados = Object.values(res).filter(i => {
+        return (filtroMod === "" || i.modelo === filtroMod) &&
+               (filtroCol === "" || i.color === filtroCol) &&
+               (filtroTal === "" || i.talla === filtroTal);
+    });
+
+    // 3. Renderizar tabla con datos filtrados
     let html = `<table class="w-full border text-center text-sm"><tr class="bg-gray-200"><th>Modelo</th><th>Color</th><th>Talla</th><th>Stock</th></tr>`;
 
-    Object.values(res).forEach(i => {
+    datosFiltrados.forEach(i => {
         const colorStock = i.total < 0 ? 'text-red-600 font-bold' : 'font-bold';
         html += `<tr class="border-b">
             <td>${i.modelo}</td><td>${i.color}</td><td>${i.talla}</td>
@@ -113,7 +128,8 @@ function actualizarTabla() {
         </tr>`;
     });
     
-    document.getElementById('listaStock').innerHTML = html + `</table>`;
+    const contenedor = document.getElementById('listaStock');
+    if (contenedor) contenedor.innerHTML = html + `</table>`;
 }
 
 // --- 2. Corregido: Historial con botón volver y borrado funcional ---
@@ -306,15 +322,22 @@ function cargarModulo(id) {
     // Botón de retorno estándar inyectado dinámicamente
     const btnVolver = `<button type="button" onclick="volver()" class="bg-gray-800 text-white px-4 py-2 rounded mb-6 print-hidden">← Volver al Menú</button>`;
 
-    if (id === 'reporte') { 
-        cont.innerHTML = `${btnVolver}
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold">Inventario Actual</h2>
-                <button onclick="descargarInventarioExcel()" class="bg-green-700 text-white px-4 py-2 rounded font-bold">📊 Descargar Excel</button>
-            </div>
-            <div id="listaStock"></div>`; 
-        actualizarTabla(); 
-    }
+   if (id === 'reporte') { 
+    cont.innerHTML = `${btnVolver}
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">Inventario Actual</h2>
+            <button onclick="descargarInventarioExcel()" class="bg-green-700 text-white px-4 py-2 rounded font-bold">📊 Descargar Excel</button>
+        </div>
+        
+        <div class="grid grid-cols-3 gap-2 mb-4 bg-gray-100 p-2 rounded">
+            <select id="filtro_modelo" onchange="actualizarTabla()" class="p-1 border rounded"><option value="">Todos Modelos</option>${generarOpciones('modelos')}</select>
+            <select id="filtro_color" onchange="actualizarTabla()" class="p-1 border rounded"><option value="">Todos Colores</option>${generarOpciones('colores')}</select>
+            <select id="filtro_talla" onchange="actualizarTabla()" class="p-1 border rounded"><option value="">Todas Tallas</option>${generarOpciones('tallas')}</select>
+        </div>
+
+        <div id="listaStock"></div>`; 
+    setTimeout(actualizarTabla, 100); 
+}
     else if (id === 'clientes') {
     let filas = clientes.map((c, index) => `
         <tr class="border-b hover:bg-gray-50">
