@@ -294,20 +294,42 @@ function descargarExcel() {
 }
 
 function descargarInventarioExcel() {
+    // 1. Obtener valores de los filtros actuales
+    const filtroMod = document.getElementById('filtro_modelo')?.value || "";
+    const filtroCol = document.getElementById('filtro_color')?.value || "";
+    const filtroTal = document.getElementById('filtro_talla')?.value || "";
+
+    // 2. Calcular los totales (la misma lógica que usa la tabla)
     const res = {};
-    inventario.forEach(i => {
+    inventario.forEach((i) => {
         const k = `${i.modelo}-${i.color}-${i.talla}`;
-        if (!res[k]) res[k] = { ...i, total: 0 };
+        if (!res[k]) res[k] = { modelo: i.modelo, color: i.color, talla: i.talla, total: 0 };
         res[k].total += i.cantidad;
     });
-    let html = `<html xmlns:x="urn:schemas-microsoft-com:office:excel"><table border="1"><tr><th>Modelo</th><th>Color</th><th>Talla</th><th>Stock</th></tr>`;
-    Object.values(res).forEach(i => {
+
+    // 3. Filtrar los resultados exactamente igual a como se hace en la tabla
+    const datosFiltrados = Object.values(res).filter(i => {
+        return (filtroMod === "" || i.modelo === filtroMod) &&
+               (filtroCol === "" || i.color === filtroCol) &&
+               (filtroTal === "" || i.talla === filtroTal);
+    });
+
+    // 4. Generar el HTML para Excel con los datos filtrados
+    let html = `<html xmlns:x="urn:schemas-microsoft-com:office:excel">
+                <table border="1">
+                    <tr><th>Modelo</th><th>Color</th><th>Talla</th><th>Stock</th></tr>`;
+    
+    datosFiltrados.forEach(i => {
         html += `<tr><td>${i.modelo}</td><td>${i.color}</td><td>${i.talla}</td><td>${i.total}</td></tr>`;
     });
+    
+    html += `</table></html>`;
+
+    // 5. Descargar el archivo
     const blob = new Blob([html], { type: "application/vnd.ms-excel" });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = "Inventario_Actual.xls";
+    link.download = "Inventario_Filtrado.xls"; // Nombre del archivo
     link.click();
 }
 
